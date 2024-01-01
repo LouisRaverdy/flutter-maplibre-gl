@@ -7,7 +7,7 @@ part of maplibre_gl;
 typedef void OnMapClickCallback(Point<double> point, LatLng coordinates);
 
 typedef void OnFeatureInteractionCallback(
-    dynamic id, Point<double> point, LatLng coordinates);
+    dynamic id, Point<double> point, LatLng coordinates, String layerId);
 
 typedef void OnFeatureDragnCallback(dynamic id,
     {required Point<double> point,
@@ -87,7 +87,7 @@ class MaplibreMapController extends ChangeNotifier {
     _maplibreGlPlatform.onFeatureTappedPlatform.add((payload) {
       for (final fun
           in List<OnFeatureInteractionCallback>.from(onFeatureTapped)) {
-        fun(payload["id"], payload["point"], payload["latLng"]);
+        fun(payload["id"], payload["point"], payload["latLng"], payload["layerId"]);
       }
     });
 

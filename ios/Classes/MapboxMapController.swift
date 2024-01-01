@@ -960,8 +960,8 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
     /*
      *  Scan layers from top to bottom and return the first matching feature
      */
-    private func firstFeatureOnLayers(at: CGPoint) -> MGLFeature? {
-        guard let style = mapView.style else { return nil }
+    private func firstFeatureOnLayers(at: CGPoint) -> (feature: MGLFeature?, layerId: String?) {
+        guard let style = mapView.style else { return (nil, nil) }
 
         // get layers in order (interactiveFeatureLayerIds is unordered)
         let clickableLayers = style.layers.filter { layer in
@@ -974,10 +974,10 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                 styleLayerIdentifiers: [layer.identifier]
             )
             if let feature = features.first {
-                return feature
+                return (feature, layer.identifier)
             }
         }
-        return nil
+        return (nil, nil)
     }
 
     /*
@@ -988,14 +988,15 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         // Get the CGPoint where the user tapped.
         let point = sender.location(in: mapView)
         let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
-
-        if let feature = firstFeatureOnLayers(at: point) {
+        let result = firstFeatureOnLayers(at: point)
+        if let feature = result.feature {
             channel?.invokeMethod("feature#onTap", arguments: [
-                        "id": feature.identifier,
-                        "x": point.x,
-                        "y": point.y,
-                        "lng": coordinate.longitude,
-                        "lat": coordinate.latitude,
+                "id": feature.identifier,
+                "x": point.x,
+                "y": point.y,
+                "lng": coordinate.longitude,
+                "lat": coordinate.latitude,
+                "layerId": result.layerId,
             ])
         } else {
             channel?.invokeMethod("map#onMapClick", arguments: [
@@ -1038,24 +1039,25 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         let point = sender.location(in: mapView)
         let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
 
-        if dragFeature == nil, began, sender.numberOfTouches == 1,
-           let feature = firstFeatureOnLayers(at: point),
-           let draggable = feature.attribute(forKey: "draggable") as? Bool,
-           draggable
-        {
-            sender.state = UIGestureRecognizer.State.began
-            dragFeature = feature
-            originDragCoordinate = coordinate
-            previousDragCoordinate = coordinate
-            mapView.allowsScrolling = false
-            let eventType = "start"
-            invokeFeatureDrag(point, coordinate, eventType)
-            for gestureRecognizer in mapView.gestureRecognizers! {
-                if let _ = gestureRecognizer as? UIPanGestureRecognizer {
-                    gestureRecognizer.addTarget(self, action: #selector(handleMapPan))
-                    break
+        if dragFeature == nil, began, sender.numberOfTouches == 1 {
+            let result = firstFeatureOnLayers(at: point)
+            if let feature = result.feature,
+               let draggable = feature.attribute(forKey: "draggable") as? Bool, draggable {
+                sender.state = UIGestureRecognizer.State.began
+                dragFeature = feature
+                originDragCoordinate = coordinate
+                previousDragCoordinate = coordinate
+                mapView.allowsScrolling = false
+                let eventType = "start"
+                invokeFeatureDrag(point, coordinate, eventType)
+                for gestureRecognizer in mapView.gestureRecognizers! {
+                    if let _ = gestureRecognizer as? UIPanGestureRecognizer {
+                        gestureRecognizer.addTarget(self, action: #selector(handleMapPan))
+                        break
+                    }
                 }
             }
+        
         }
         if end, dragFeature != nil {
             mapView.allowsScrolling = true
@@ -1553,7 +1555,6 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             let source = MGLShapeSource(identifier: sourceId, shape: parsed, options: [:])
             addedShapesByLayer[sourceId] = parsed
             mapView.style?.addSource(source)
-            print(source)
         } catch {}
     }
 
