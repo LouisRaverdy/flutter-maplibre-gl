@@ -2,11 +2,10 @@
 [![Flutter CI](https://github.com/maplibre/flutter-maplibre-gl/actions/workflows/flutter_ci.yml/badge.svg)](https://github.com/maplibre/flutter-maplibre-gl/actions/workflows/flutter_ci.yml)
 [![Generate docs](https://github.com/maplibre/flutter-maplibre-gl/actions/workflows/generate_docs.yml/badge.svg)](https://github.com/maplibre/flutter-maplibre-gl/actions/workflows/generate_docs.yml)
 
-> ``⚠️`` Current notice: the repository has been transferred to the @maplibre organization. You shouldn't see any negative effects, as GitHub automatically redirects references from the old URL to the new URL. Please see [#221](https://github.com/maplibre/flutter-maplibre-gl/issues/221) for more information.
 
 This Flutter plugin allows to show **embedded interactive and customizable vector maps** as a Flutter widget. 
 
-For the Android and iOS integration, we use [maplibre-gl-native](https://github.com/maplibre/maplibre-gl-native). For web, we rely on [maplibre-gl-js](https://github.com/maplibre/maplibre-gl-js). This project only supports a subset of the API exposed by these libraries. 
+For the Android and iOS integration, we use [maplibre-gl-native](https://github.com/maplibre/maplibre-gl-native). This project only supports a subset of the API exposed by these libraries. 
 
 
 This project is a fork of [https://github.com/tobrun/flutter-mapbox-gl](https://github.com/tobrun/flutter-mapbox-gl), replacing its usage of Mapbox GL libraries with the open source [Maplibre GL](https://github.com/maplibre) libraries.
@@ -24,19 +23,10 @@ dependencies:
     ...
     maplibre_gl:
       git:
-        url: https://github.com/maplibre/flutter-maplibre-gl.git
+        url: https://github.com/LouisRaverdy/flutter-maplibre-gl.git
         ref: main
 ```
 This will get you the very latest changes from the main branch.
-You can replace `main` with the name of the [latest release](https://github.com/maplibre/flutter-maplibre-gl/releases)
-to get a more stable version.
-
-
-
-Compared to flutter-mapbox-gl, the only breaking API changes are: 
-- `MapboxMap` <--> `MaplibreMap`
-- `MapboxMapController` <--> `MaplibreMapController`
-
 
 ### Documentation
 Documentation is available on the docs branch in the doc/api folder and automatically updated on each push to the main branch. You can easily preview the [documentation / API reference here.](https://htmlpreview.github.io/?https://github.com/maplibre/flutter-maplibre-gl/blob/docs/doc/api/index.html)
