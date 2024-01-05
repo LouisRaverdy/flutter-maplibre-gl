@@ -17,6 +17,7 @@ import android.location.Location;
 import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.TextureView;
@@ -630,25 +631,25 @@ final class MapboxMapController
     }
   }
 
-  private Feature firstFeatureOnLayers(RectF in) {
+  private Pair<Feature, String> firstFeatureOnLayers(RectF in) {
     if (style != null) {
-      final List<Layer> layers = style.getLayers();
-      final List<String> layersInOrder = new ArrayList<String>();
-      for (Layer layer : layers) {
-        String id = layer.getId();
-        if (interactiveFeatureLayerIds.contains(id)) layersInOrder.add(id);
-      }
-      Collections.reverse(layersInOrder);
-
-      for (String id : layersInOrder) {
-        List<Feature> features = mapboxMap.queryRenderedFeatures(in, id);
-        if (!features.isEmpty()) {
-          return features.get(0);
+        final List<Layer> layers = style.getLayers();
+        final List<String> layersInOrder = new ArrayList<String>();
+        for (Layer layer : layers) {
+            String id = layer.getId();
+            if (interactiveFeatureLayerIds.contains(id)) layersInOrder.add(id);
         }
-      }
+        Collections.reverse(layersInOrder);
+
+        for (String id : layersInOrder) {
+            List<Feature> features = mapboxMap.queryRenderedFeatures(in, id);
+            if (!features.isEmpty()) {
+                return new Pair<>(features.get(0), id);
+            }
+        }
     }
     return null;
-  }
+}
 
   @Override
   public void onMethodCall(MethodCall call, MethodChannel.Result result) {
@@ -1596,15 +1597,20 @@ final class MapboxMapController
   public boolean onMapClick(@NonNull LatLng point) {
     PointF pointf = mapboxMap.getProjection().toScreenLocation(point);
     RectF rectF = new RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10);
-    Feature feature = firstFeatureOnLayers(rectF);
+    Pair<Feature, String> featureLayerPair = firstFeatureOnLayers(rectF);
     final Map<String, Object> arguments = new HashMap<>();
     arguments.put("x", pointf.x);
     arguments.put("y", pointf.y);
     arguments.put("lng", point.getLongitude());
     arguments.put("lat", point.getLatitude());
-    if (feature != null) {
-      arguments.put("id", feature.id());
-      methodChannel.invokeMethod("feature#onTap", arguments);
+    if (featureLayerPair != null) {
+        arguments.put("layerId", featureLayerPair.second);
+        if (featureLayerPair.first != null) {
+          arguments.put("id", featureLayerPair.first.id());
+          methodChannel.invokeMethod("feature#onTap", arguments);
+        } else {
+          methodChannel.invokeMethod("map#onMapClick", arguments);
+        }
     } else {
       methodChannel.invokeMethod("map#onMapClick", arguments);
     }
