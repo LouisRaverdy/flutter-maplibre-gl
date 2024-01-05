@@ -2078,8 +2078,8 @@ final class MapboxMapController
       PointF pointf = detector.getFocalPoint();
       LatLng origin = mapboxMap.getProjection().fromScreenLocation(pointf);
       RectF rectF = new RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10);
-      Feature feature = firstFeatureOnLayers(rectF);
-      if (feature != null && startDragging(feature, origin)) {
+      Pair<Feature, String> featureLayerPair = firstFeatureOnLayers(rectF);
+      if (featureLayerPair != null && featureLayerPair.first != null && startDragging(feature, origin)) {
         invokeFeatureDrag(pointf, "start");
         return true;
       }
