@@ -56,9 +56,9 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             target: self,
             action: #selector(handleMapTap(sender:))
         )
-        for recognizer in mapView.gestureRecognizers! where recognizer is UITapGestureRecognizer {
+        /*for recognizer in mapView.gestureRecognizers! where recognizer is UITapGestureRecognizer {
             singleTap.require(toFail: recognizer)
-        }
+        } we disabled it because it adding delay to the on tap */
         mapView.addGestureRecognizer(singleTap)
 
         let longPress = UILongPressGestureRecognizer(
