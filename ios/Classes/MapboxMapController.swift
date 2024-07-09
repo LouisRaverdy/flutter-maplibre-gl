@@ -71,10 +71,10 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             longPress.require(toFail: recognizer)
         }
         var longPressRecognizerAdded = false
-        
+
         if let args = args as? [String: Any] {
-            
-            Convert.interpretMapboxMapOptions(options: args["options"], delegate: self)
+
+            Convert.interpretMapLibreMapOptions(options: args["options"], delegate: self)
             if let initialCameraPosition = args["initialCameraPosition"] as? [String: Any],
                let camera = MGLMapCamera.fromDict(initialCameraPosition, mapView: mapView),
                let zoom = initialCameraPosition["zoom"] as? Double
@@ -173,7 +173,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             if let langStr = Locale.current.languageCode {
                 setMapLanguage(language: langStr)
             }
-            
+
             result(nil)
         case "map#updateContentInsets":
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
@@ -319,7 +319,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         case "camera#move":
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let cameraUpdate = arguments["cameraUpdate"] as? [Any] else { return }
-            
+
             if let camera = Convert.parseCameraUpdate(cameraUpdate: cameraUpdate, mapView: mapView) {
                 mapView.setCamera(camera, animated: false)
             }
@@ -328,12 +328,12 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let cameraUpdate = arguments["cameraUpdate"] as? [Any] else { return }
             guard let camera = Convert.parseCameraUpdate(cameraUpdate: cameraUpdate, mapView: mapView) else { return }
-            
-            
+
+
             let completion = {
                 result(nil)
             }
-            
+
             if let duration = arguments["duration"] as? TimeInterval {
                 if let padding = Convert.parseLatLngBoundsPadding(cameraUpdate) {
                     mapView.fly(to: camera, edgePadding: padding, withDuration: duration / 1000, completionHandler: completion)
@@ -532,6 +532,24 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             let minzoom = arguments["minzoom"] as? Double
             let maxzoom = arguments["maxzoom"] as? Double
             addHillshadeLayer(
+                sourceId: sourceId,
+                layerId: layerId,
+                belowLayerId: belowLayerId,
+                minimumZoomLevel: minzoom,
+                maximumZoomLevel: maxzoom,
+                properties: properties
+            )
+            result(nil)
+
+        case "heatmapLayer#add":
+            guard let arguments = methodCall.arguments as? [String: Any] else { return }
+            guard let sourceId = arguments["sourceId"] as? String else { return }
+            guard let layerId = arguments["layerId"] as? String else { return }
+            guard let properties = arguments["properties"] as? [String: String] else { return }
+            let belowLayerId = arguments["belowLayerId"] as? String
+            let minzoom = arguments["minzoom"] as? Double
+            let maxzoom = arguments["maxzoom"] as? Double
+            addHeatmapLayer(
                 sourceId: sourceId,
                 layerId: layerId,
                 belowLayerId: belowLayerId,
@@ -825,11 +843,11 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             }
             layer.isVisible = visible
             result(nil)
-            
+
         case "map#querySourceFeatures":
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let sourceId = arguments["sourceId"] as? String else { return }
-            
+
             var sourceLayerId = Set<String>()
             if let layerId = arguments["sourceLayerId"] as? String {
                 sourceLayerId.insert(layerId)
@@ -838,10 +856,10 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             if let filter = arguments["filter"] as? [Any] {
                 filterExpression = NSPredicate(mglJSONObject: filter)
             }
-            
+
             var reply = [String: NSObject]()
-            var features: [MGLFeature] = []
-            
+            var features: [MLNFeature] = []
+
             guard let style = mapView.style else { return }
             if let source = style.source(withIdentifier: sourceId) {
                 if let vectorSource = source as? MGLVectorTileSource {
@@ -850,7 +868,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                     features = shapeSource.features(matching: filterExpression)
                 }
             }
-            
+
             var featuresJson = [String]()
             for feature in features {
                 let dictionary = feature.geoJSONDictionary()
@@ -868,11 +886,11 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
 
         case "style#getLayerIds":
             var layerIds = [String]()
-            
+
             guard let style = mapView.style else { return }
-            
+
             style.layers.forEach { layer in layerIds.append(layer.identifier) }
-            
+
             var reply = [String: NSObject]()
             reply["layers"] = layerIds as NSObject
             result(reply)
@@ -887,18 +905,18 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             var reply = [String: NSObject]()
             reply["sources"] = sourceIds as NSObject
             result(reply)
-            
+
         case "style#getFilter":
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let layerId = arguments["layerId"] as? String else { return }
-            
+
             guard let style = mapView.style else { return }
             guard let layer = style.layer(withIdentifier: layerId) else { return }
-            
+
             var currentLayerFilter : String = ""
             if let vectorLayer = layer as? MGLVectorStyleLayer {
                 if let layerFilter = vectorLayer.predicate {
-                    
+
                     let jsonExpression = layerFilter.mgl_jsonExpressionObject
                     if let data = try? JSONSerialization.data(withJSONObject: jsonExpression, options: []) {
                         currentLayerFilter = String(data: data, encoding: String.Encoding.utf8) ?? ""
@@ -910,11 +928,11 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                 ).flutterError)
                 return;
             }
-            
+
             var reply = [String: NSObject]()
             reply["filter"] = currentLayerFilter as NSObject
             result(reply)
-            
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -952,7 +970,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
     private func getCamera() -> MGLMapCamera? {
         return trackCameraPosition ? mapView.camera : nil
     }
-    
+
     private func setMapLanguage(language: String) {
         self.mapView.setMapLanguage(language)
     }
@@ -960,7 +978,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
     /*
      *  Scan layers from top to bottom and return the first matching feature
      */
-    private func firstFeatureOnLayers(at: CGPoint) -> (feature: MGLFeature?, layerId: String?) {
+    private func firstFeatureOnLayers(at: CGPoint) -> (feature: MLNFeature?, layerId: String?) {
         guard let style = mapView.style else { return (nil, nil) }
 
         // get layers in order (interactiveFeatureLayerIds is unordered)
@@ -988,6 +1006,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         // Get the CGPoint where the user tapped.
         let point = sender.location(in: mapView)
         let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+
         let result = firstFeatureOnLayers(at: point)
         if let feature = result.feature {
             channel?.invokeMethod("feature#onTap", arguments: [
@@ -1042,7 +1061,8 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         if dragFeature == nil, began, sender.numberOfTouches == 1 {
             let result = firstFeatureOnLayers(at: point)
             if let feature = result.feature,
-               let draggable = feature.attribute(forKey: "draggable") as? Bool, draggable {
+            let draggable = feature.attribute(forKey: "draggable") as? Bool,
+            draggable {
                 sender.state = UIGestureRecognizer.State.began
                 dragFeature = feature
                 originDragCoordinate = coordinate
@@ -1057,7 +1077,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                     }
                 }
             }
-        
+
         }
         if end, dragFeature != nil {
             mapView.allowsScrolling = true

@@ -6,7 +6,7 @@ part of maplibre_gl;
 
 typedef void OnMapClickCallback(Point<double> point, LatLng coordinates);
 
-typedef void OnFeatureInteractionCallback(
+typedef OnFeatureInteractionCallback = void Function(
     dynamic id, Point<double> point, LatLng coordinates, String layerId);
 
 typedef void OnFeatureDragnCallback(dynamic id,

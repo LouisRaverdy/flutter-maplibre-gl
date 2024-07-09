@@ -22,6 +22,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
+import android.util.Pair;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -631,21 +632,43 @@ final class MapboxMapController
     }
   }
 
+  private void addHeatmapLayer(
+      String layerName,
+      String sourceName,
+      Float minZoom,
+      Float maxZoom,
+      String belowLayerId,
+      PropertyValue[] properties,
+      Expression filter) {
+    HeatmapLayer layer = new HeatmapLayer(layerName, sourceName);
+    layer.setProperties(properties);
+    if (minZoom != null) {
+      layer.setMinZoom(minZoom);
+    }
+    if (maxZoom != null) {
+      layer.setMaxZoom(maxZoom);
+    }
+    if (belowLayerId != null) {
+      style.addLayerBelow(layer, belowLayerId);
+    } else {
+      style.addLayer(layer);
+    }
+  }
+
   private Pair<Feature, String> firstFeatureOnLayers(RectF in) {
     if (style != null) {
-        final List<Layer> layers = style.getLayers();
-        final List<String> layersInOrder = new ArrayList<String>();
-        for (Layer layer : layers) {
-            String id = layer.getId();
-            if (interactiveFeatureLayerIds.contains(id)) layersInOrder.add(id);
-        }
-        Collections.reverse(layersInOrder);
+      final List<Layer> layers = style.getLayers();
+      final List<String> layersInOrder = new ArrayList<String>();
+      for (Layer layer : layers) {
+        String id = layer.getId();
+        if (interactiveFeatureLayerIds.contains(id)) layersInOrder.add(id);
+      }
+      Collections.reverse(layersInOrder);
 
-        for (String id : layersInOrder) {
-            List<Feature> features = mapboxMap.queryRenderedFeatures(in, id);
-            if (!features.isEmpty()) {
-                return new Pair<>(features.get(0), id);
-            }
+      for (String id : layersInOrder) {
+        List<Feature> features = mapLibreMap.queryRenderedFeatures(in, id);
+        if (!features.isEmpty()) {
+          return new Pair<Feature, String>(features.get(0), id);
         }
     }
     return null;
@@ -1603,14 +1626,10 @@ final class MapboxMapController
     arguments.put("y", pointf.y);
     arguments.put("lng", point.getLongitude());
     arguments.put("lat", point.getLatitude());
-    if (featureLayerPair != null) {
-        arguments.put("layerId", featureLayerPair.second);
-        if (featureLayerPair.first != null) {
-          arguments.put("id", featureLayerPair.first.id());
-          methodChannel.invokeMethod("feature#onTap", arguments);
-        } else {
-          methodChannel.invokeMethod("map#onMapClick", arguments);
-        }
+    if (featureLayerPair != null && featureLayerPair.first != null) {
+      arguments.put("layerId", featureLayerPair.second);
+      arguments.put("id", featureLayerPair.first.id());
+      methodChannel.invokeMethod("feature#onTap", arguments);
     } else {
       methodChannel.invokeMethod("map#onMapClick", arguments);
     }
